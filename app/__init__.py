@@ -1,12 +1,14 @@
+import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 
+# Crear la app
 app = Flask(__name__)
-app.secret_key = "clave-segura-y-temporal"
 
-# Configuración de la base de datos
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite3"
+# Configurar desde variables de entorno
+app.secret_key = os.environ.get("SECRET_KEY", "clave-temporal-dev")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Inicializar extensiones
