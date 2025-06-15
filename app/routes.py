@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 import calendarific
-from calendar_api import obtener_festivos
+from todolist_app_pro.calendar_api import obtener_festivos
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -124,13 +124,9 @@ def delete_task(id):
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    key = os.environ.get("CALENDARIFIC_KEY")
-    country = os.environ.get("CALENDARIFIC_COUNTRY", "MX")
-    year = datetime.now().year
-    cal = calendarific.v2(key)
-    params = {"country": country, "year": year}
-    holidays = cal.holidays(params).get("response", {}).get("holidays", [])
-    today = datetime.today().strftime("%A, %d de %B de %Y")
+    from datetime import datetime
+    today = datetime.today().strftime("%A, %d de %B de %Y")
+    holidays = obtener_festivos()
     return render_template("dashboard.html", today=today, holidays=holidays)
 
 @app.errorhandler(404)
