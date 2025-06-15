@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h2>Mi perfil</h2>
+  <p><strong>Usuario:</strong> {{ current_user.username }}</p>
+  <p><strong>Correo:</strong> {{ current_user.email }}</p>
+
+  <a href="{{ url_for('editar_perfil') }}" class="btn btn-warning mt-2">Editar perfil</a>
+
+  <a href="{{ url_for('cambiar_contraseña') }}" class="btn btn-outline-secondary">Cambiar contraseña</a>
+
+  <form method="POST" action="{{ url_for('eliminar_cuenta') }}" onsubmit="return confirm('¿Seguro que deseas eliminar tu cuenta? Esta acción es irreversible.')">
+    <button type="submit" class="btn btn-danger mt-2">Eliminar cuenta</button>
+  </form>
+{% endblock %}

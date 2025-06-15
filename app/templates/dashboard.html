@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h2>Dashboard</h2>
+  <p>📅 Hoy es <strong>{{ today }}</strong></p>
+
+  <h3>Festivos en {{ holidays[0].date.datetime.year }}</h3>
+  <ul class="list-group">
+    {% for h in holidays %}
+      <li class="list-group-item">
+        <strong>{{ h.date.iso }}</strong> – {{ h.name }}
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

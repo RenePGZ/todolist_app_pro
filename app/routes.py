@@ -1,10 +1,14 @@
 from app import app
 from app import db
-from app.forms import RegisterForm, TaskForm, LoginForm
+from app.forms import RegisterForm, TaskForm, LoginForm, EditProfileForm, ChangePasswordForm
 from app.models import User, Task
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from datetime import datetime
+import calendarific
+from calendar_api import obtener_festivos
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -57,8 +61,17 @@ def logout():
 @app.route("/tasks")
 @login_required
 def tasks():
-    user_tasks = Task.query.filter_by(user_id=current_user.id).order_by(Task.created_at.desc()).all()
-    return render_template("tasks.html", tasks=user_tasks)
+    filtro = request.args.get("filtro", "todas")
+    
+    query = Task.query.filter_by(user_id=current_user.id)
+
+    if filtro == "completadas":
+        query = query.filter_by(completed=True)
+    elif filtro == "pendientes":
+        query = query.filter_by(completed=False)
+    
+    user_tasks = query.order_by(Task.created_at.desc()).all()
+    return render_template("tasks.html", tasks=user_tasks, filtro=filtro)
 
 @app.route("/add", methods=["GET", "POST"])
 @login_required
@@ -108,6 +121,18 @@ def delete_task(id):
     flash("Tarea eliminada.", "info")
     return redirect(url_for("tasks"))
 
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    key = os.environ.get("CALENDARIFIC_KEY")
+    country = os.environ.get("CALENDARIFIC_COUNTRY", "MX")
+    year = datetime.now().year
+    cal = calendarific.v2(key)
+    params = {"country": country, "year": year}
+    holidays = cal.holidays(params).get("response", {}).get("holidays", [])
+    today = datetime.today().strftime("%A, %d de %B de %Y")
+    return render_template("dashboard.html", today=today, holidays=holidays)
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("errors/404.html"), 404
@@ -116,4 +141,54 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template("errors/500.html"), 500
 
+@app.route("/perfil")
+@login_required
+def perfil():
+    return render_template("profile.html")
 
+@app.route("/editar_perfil", methods=["GET", "POST"])
+@login_required
+def editar_perfil():
+    form = EditProfileForm(obj=current_user)
+    if form.validate_on_submit():
+        # Validar duplicados (otro usuario con el mismo correo o username)
+        if User.query.filter(User.username == form.username.data, User.id != current_user.id).first():
+            flash("Este nombre de usuario ya está en uso.", "danger")
+            return redirect(url_for("editar_perfil"))
+
+        if User.query.filter(User.email == form.email.data, User.id != current_user.id).first():
+            flash("Este correo ya está registrado.", "danger")
+            return redirect(url_for("editar_perfil"))
+
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        db.session.commit()
+        flash("Perfil actualizado.", "success")
+        return redirect(url_for("perfil"))
+    return render_template("edit_profile.html", form=form)
+
+@app.route("/eliminar_cuenta", methods=["POST"])
+@login_required
+def eliminar_cuenta():
+    user_id = current_user.id
+    logout_user()
+    Task.query.filter_by(user_id=user_id).delete()
+    User.query.filter_by(id=user_id).delete()
+    db.session.commit()
+    flash("Cuenta eliminada exitosamente.", "info")
+    return redirect(url_for("login"))
+
+@app.route("/cambiar_contraseña", methods=["GET", "POST"])
+@login_required
+def cambiar_contraseña():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if not check_password_hash(current_user.password, form.current_password.data):
+            flash("La contraseña actual no es correcta.", "danger")
+            return redirect(url_for("cambiar_contraseña"))
+
+        current_user.password = generate_password_hash(form.new_password.data)
+        db.session.commit()
+        flash("Contraseña actualizada correctamente.", "success")
+        return redirect(url_for("perfil"))
+    return render_template("change_password.html", form=form)
