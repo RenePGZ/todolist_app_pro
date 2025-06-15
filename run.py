@@ -1,7 +1,7 @@
 from app import app
 import logging
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 load_dotenv()  # Carga variables de .env
 
