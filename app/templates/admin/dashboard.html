@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h2>Panel de Administración</h2>
+  
+  <h4>Usuarios registrados</h4>
+    <ul>
+    {% for user in users %}
+        <li>
+        {{ user.username }} ({{ user.email }})
+        <form action="{{ url_for('eliminar_usuario_admin', id=user.id) }}" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-danger"
+                onclick="return confirm('¿Estás seguro de que quieres eliminar a {{ user.username }}?')">
+                Eliminar
+            </button>
+        </form>
+        </li>
+    {% endfor %}
+    </ul>
+
+  <h4>Todas las tareas</h4>
+  <ul>
+    {% for task in tasks %}
+      <li>{{ task.title }} - {{ task.user.username }} - {% if task.completed %}✅{% else %}❌{% endif %}</li>
+    {% endfor %}
+  </ul>
+
+{% endblock %}

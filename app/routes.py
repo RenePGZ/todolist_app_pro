@@ -2,13 +2,51 @@ from app import app
 from app import db
 from app.forms import RegisterForm, TaskForm, LoginForm, EditProfileForm, ChangePasswordForm
 from app.models import User, Task
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, abort
 from flask_login import login_user, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 import calendarific
-from todolist_app_pro.calendar_api import obtener_festivos
+from calendar_api import obtener_festivos
+
+def admin_required(f):
+    @login_required
+    def wrapper(*args, **kwargs):
+        if current_user.id != 1:
+            abort(403)
+        return f(*args, **kwargs)
+    wrapper.__name__ = f.__name__
+    return wrapper
+
+@app.route("/admin")
+@admin_required
+def admin():
+    users = User.query.all()
+    tasks = Task.query.order_by(Task.created_at.desc()).all()
+    return render_template("admin/dashboard.html", users=users, tasks=tasks)
+
+@app.route("/admin/dashboard")
+@login_required
+def admin_dashboard():
+    # ⚠️ Asegúrate de que el usuario sea admin (si tienes roles)
+    if not current_user.is_authenticated or not current_user.is_admin:
+        abort(403)
+
+    users = User.query.all()
+    tasks = Task.query.all()
+    return render_template("admin/dashboard.html", users=users, tasks=tasks)
+
+@app.route("/admin/eliminar/<int:id>", methods=["POST"])
+@login_required
+def eliminar_usuario_admin(id):
+    if not current_user.is_admin:
+        abort(403)
+    usuario = User.query.get_or_404(id)
+    db.session.delete(usuario)
+    db.session.commit()
+    flash("Usuario eliminado", "info")
+    return redirect(url_for("admin_dashboard"))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
